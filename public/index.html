@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kindred · gifts and outings that fit one specific friend</title>
+  <meta name="description" content="Tell Kindred a few things your friend loves. It plans a gift and an outing grounded in Qloo's taste graph, shows why each pick fits them, and checks whether a gift you have in mind will land." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Kindred</div>
+    <p class="tag">Gifts and outings that fit one specific friend, grounded in Qloo's taste graph. Every pick says why.</p>
+  </header>
+
+  <main>
+    <section class="card examples-card" aria-labelledby="ex-h">
+      <h2 id="ex-h" class="small-h">Start with an example friend <span class="hint">pre-built, loads instantly</span></h2>
+      <div id="examples" class="examples"></div>
+    </section>
+
+    <form id="plan-form" class="card form" autocomplete="off">
+      <div class="row">
+        <label>Who's it for?
+          <input name="friend" maxlength="40" placeholder="Maya" value="Maya" />
+        </label>
+        <label>Occasion
+          <input name="occasion" maxlength="40" placeholder="birthday" value="birthday" />
+        </label>
+      </div>
+      <label>Things they love <span class="hint">one per line: artists, films, shows, books, brands, places (up to 6)</span>
+        <textarea name="loves" rows="4" maxlength="500">Phoebe Bridgers
+Lady Bird
+Tartine Bakery</textarea>
+      </label>
+      <label>Interests in their own words <span class="hint">optional, comma-separated, e.g. natural wine, vinyl, hiking (up to 3)</span>
+        <input name="interests" maxlength="200" placeholder="natural wine, vinyl" value="natural wine" />
+      </label>
+      <div class="row">
+        <label>City for the outing
+          <input name="city" maxlength="80" placeholder="San Francisco" value="San Francisco" />
+        </label>
+        <label>Vibe
+          <select name="vibe">
+            <option value="dinner">Dinner, then drinks</option>
+            <option value="daytime">Coffee and wander</option>
+            <option value="night">Drinks and live music</option>
+          </select>
+        </label>
+        <label>Budget
+          <select name="budget">
+            <option value="1">$</option><option value="2">$$</option>
+            <option value="3" selected>$$$</option><option value="4">$$$$</option>
+          </select>
+        </label>
+      </div>
+      <label class="check"><input type="checkbox" name="surprise" /> Surprise me: skip the most obvious, mainstream picks</label>
+      <button type="submit" class="go">Plan it</button>
+    </form>
+
+    <section id="status" class="status" role="status" aria-live="polite"></section>
+    <section id="result" hidden></section>
+
+    <section id="check" class="card check-card" hidden aria-labelledby="check-h">
+      <h3 id="check-h">Would they like it?</h3>
+      <p class="sub">Already have a gift or place in mind? Kindred scores it against their taste with Qloo.</p>
+      <form id="check-form" class="check-row" autocomplete="off">
+        <input name="candidate" maxlength="80" placeholder="e.g. Le Labo, Mitski, Dune, Fjällräven" aria-label="Gift or place to check" />
+        <button type="submit" class="go small">Check</button>
+      </form>
+      <div id="check-result" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer>
+    Recommendations powered by the <a href="https://www.qloo.com/" rel="noopener" target="_blank">Qloo</a> Taste AI Insights API.
+    Built for the <a href="https://qloo.devpost.com/" rel="noopener" target="_blank">Qloo Agentic Hackathon</a>.
+    <a href="https://github.com/Zhuoli/kindred" rel="noopener" target="_blank">Source on GitHub</a>.
+  </footer>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
