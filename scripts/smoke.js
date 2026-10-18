@@ -2,13 +2,28 @@
 // Usage: QLOO_API_KEY=... node scripts/smoke.js ['{"loves":["..."],"city":"..."}']   (key read from env, never printed)
 import { createQlooClient, quota } from '../lib/qloo.js';
 import { runAgent, runCheck, validateRequest, validateCheck } from '../lib/agent.js';
+import { runTogether, validateTogether } from '../lib/together.js';
 
 const input = process.argv[2] ? JSON.parse(process.argv[2])
   : { friend: 'Maya', loves: ['Phoebe Bridgers', 'Lady Bird', 'Tartine Bakery'], interests: ['natural wine'], city: 'San Francisco', vibe: 'dinner', budget: 3 };
 const qloo = createQlooClient();
 const names = (xs) => (xs ?? []).map((x) => `${x.name}${x.kind ? ` [${x.kind}${x.priceLevel ? ' ' + '$'.repeat(x.priceLevel) : ''}]` : ''}${x.because?.length ? ` (because: ${x.because.map((b) => b.name).join(', ')})` : ''}${x.into?.length ? ` (into: ${x.into.join(', ')})` : ''}`);
 let plan;
-if (input.candidate) {
+const lean = (xs) => (xs ?? []).map((x) => `${x.name} <${x.lean}${x.share != null ? ' ' + x.share : ''}>${x.kind ? ` [${x.kind}]` : ''}${x.because?.length ? ` (because: ${x.because.map((b) => `${b.name}/${b.who}`).join(', ')})` : ''}`);
+if (input.mode === 'us') {
+  const v = validateTogether(input);
+  if (!v.ok) { console.error(v.errors); process.exit(1); }
+  plan = await runTogether(v.value, { qloo, onEvent: process.env.EVENTS ? (e) => console.error('[event]', e.type, e.phase ?? e.step ?? '', e.label ?? '') : null });
+  console.log(JSON.stringify({
+    ok: plan.ok, ms: plan.ms, error: plan.error,
+    them: plan.loved?.them?.map((l) => `${l.name} [${l.type}]`), you: plan.loved?.you?.map((l) => `${l.name} [${l.type}]`),
+    common: plan.common, films: lean(plan.together?.films), shows: lean(plan.together?.shows), artists: lean(plan.together?.artists),
+    main: lean(plan.outing?.main?.picks), after: lean(plan.outing?.after?.picks), balance: plan.balance,
+    warnings: plan.warnings, calls: plan.trace?.length,
+    vetted: plan.trace?.filter((t) => t.dropped || t.note).map((t) => `${t.step}: kept ${t.kept}${t.note ? ' (' + t.note + ')' : ''}`),
+    errors: plan.trace?.filter((t) => t.error).map((t) => t.error),
+  }, null, 2));
+} else if (input.candidate) {
   plan = await runCheck(validateCheck(input).value, { qloo });
   console.log(JSON.stringify({ ok: plan.ok, error: plan.error, candidate: plan.candidate?.name, type: plan.candidate?.type, affinity: plan.affinity, verdict: plan.verdict, because: plan.because, alternatives: names(plan.alternatives), warnings: plan.warnings, calls: plan.trace.length }, null, 2));
 } else {

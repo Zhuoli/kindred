@@ -3,40 +3,79 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kindred · gifts and outings that fit one specific friend</title>
-  <meta name="description" content="Tell Kindred a few things your friend loves. It plans a gift and an outing grounded in Qloo's taste graph, shows why each pick fits them, and checks whether a gift you have in mind will land." />
+  <title>Kindred · gifts and outings that fit one specific friend, or both of you</title>
+  <meta name="description" content="Tell Kindred a few things your friend loves. It plans a gift and an outing grounded in Qloo's taste graph, shows why each pick fits them, and can blend your taste with theirs into a plan you'll both enjoy." />
+  <meta property="og:title" content="Kindred: plans that fit a specific person, or both of you" />
+  <meta property="og:description" content="A taste-aware agent on Qloo's Insights API. Every pick says whose taste it serves and why." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://kindred-qloo.vercel.app/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="theme-color" content="#c2410c" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
+  <a class="skip" href="#plan-form">Skip to the planner</a>
   <header class="top">
-    <div class="brand">Kindred</div>
-    <p class="tag">Gifts and outings that fit one specific friend, grounded in Qloo's taste graph. Every pick says why.</p>
+    <div class="brand-row">
+      <div class="brand" aria-label="Kindred">Kindred</div>
+      <span class="chip-q">on Qloo's taste graph</span>
+    </div>
+    <p class="tag">Plans that fit one specific person, or both of you. Kindred reads what they love, asks Qloo what that taste predicts across music, film, brands and places, vets every result, and tells you why each pick fits.</p>
+    <ol class="how" aria-label="How it works">
+      <li><b>1</b> Name a few things they love</li>
+      <li><b>2</b> Watch the agent query and vet Qloo live</li>
+      <li><b>3</b> Get picks that each say whose taste they serve</li>
+    </ol>
   </header>
 
   <main>
     <section class="card examples-card" aria-labelledby="ex-h">
-      <h2 id="ex-h" class="small-h">Start with an example friend <span class="hint">pre-built, loads instantly</span></h2>
+      <h2 id="ex-h" class="small-h">Start with an example <span class="hint">pre-built, loads instantly</span></h2>
       <div id="examples" class="examples"></div>
     </section>
 
-    <form id="plan-form" class="card form" autocomplete="off">
-      <div class="row">
-        <label>Who's it for?
-          <input name="friend" maxlength="40" placeholder="Maya" value="Maya" />
-        </label>
-        <label>Occasion
-          <input name="occasion" maxlength="40" placeholder="birthday" value="birthday" />
-        </label>
-      </div>
-      <label>Things they love <span class="hint">one per line: artists, films, shows, books, brands, places (up to 6)</span>
-        <textarea name="loves" rows="4" maxlength="500">Phoebe Bridgers
+    <form id="plan-form" class="card form" autocomplete="off" novalidate>
+      <fieldset class="modes" aria-label="Who is the plan for?">
+        <label class="mode"><input type="radio" name="mode" value="gift" checked /><span><b>For them</b><small>a gift and an outing for one friend</small></span></label>
+        <label class="mode"><input type="radio" name="mode" value="us" /><span><b>For both of us</b><small>blend your taste with theirs</small></span></label>
+      </fieldset>
+
+      <div class="people">
+        <div class="person them">
+          <h3 class="ph-h"><span class="dot them"></span> Them</h3>
+          <div class="row">
+            <label>Name
+              <input name="friend" maxlength="40" placeholder="Maya" value="Maya" />
+            </label>
+            <label>Occasion
+              <input name="occasion" maxlength="40" placeholder="birthday" value="birthday" />
+            </label>
+          </div>
+          <label>Things they love <span class="hint">one per line: artists, films, shows, books, brands, places (up to 6)</span>
+            <textarea name="loves" rows="4" maxlength="500">Phoebe Bridgers
 Lady Bird
 Tartine Bakery</textarea>
-      </label>
-      <label>Interests in their own words <span class="hint">optional, comma-separated, e.g. natural wine, vinyl, hiking (up to 3)</span>
-        <input name="interests" maxlength="200" placeholder="natural wine, vinyl" value="natural wine" />
-      </label>
+          </label>
+          <label>Interests in their words <span class="hint">optional, comma-separated (up to 3)</span>
+            <input name="interests" maxlength="200" placeholder="natural wine, vinyl" value="natural wine" />
+          </label>
+        </div>
+
+        <div class="person you" data-us-only hidden>
+          <h3 class="ph-h"><span class="dot you"></span> You</h3>
+          <label>Your name <span class="hint">optional</span>
+            <input name="you" maxlength="40" placeholder="you" />
+          </label>
+          <label>Things you love <span class="hint">one per line (up to 6)</span>
+            <textarea name="yourLoves" rows="4" maxlength="500" placeholder="The Bear&#10;Wes Anderson&#10;Radiohead"></textarea>
+          </label>
+          <label>Your interests <span class="hint">optional, comma-separated (up to 3)</span>
+            <input name="yourInterests" maxlength="200" placeholder="jazz" />
+          </label>
+        </div>
+      </div>
+
       <div class="row">
         <label>City for the outing
           <input name="city" maxlength="80" placeholder="San Francisco" value="San Francisco" />
@@ -57,9 +96,21 @@ Tartine Bakery</textarea>
       </div>
       <label class="check"><input type="checkbox" name="surprise" /> Surprise me: skip the most obvious, mainstream picks</label>
       <button type="submit" class="go">Plan it</button>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
     </form>
 
-    <section id="status" class="status" role="status" aria-live="polite"></section>
+    <section id="live" class="card live" hidden aria-labelledby="live-h">
+      <div class="live-head">
+        <h3 id="live-h"><span class="pulse" aria-hidden="true"></span> <span id="live-title">The agent at work</span></h3>
+        <span id="live-meta" class="live-meta"></span>
+      </div>
+      <div id="live-body" class="live-body"></div>
+      <div class="live-foot">
+        <label class="tiny"><input type="checkbox" id="show-params" /> Show Qloo parameters</label>
+        <button type="button" id="live-toggle" class="linkish" hidden>Hide steps</button>
+      </div>
+    </section>
+
     <section id="result" hidden></section>
 
     <section id="check" class="card check-card" hidden aria-labelledby="check-h">
@@ -74,7 +125,7 @@ Tartine Bakery</textarea>
   </main>
 
   <footer>
-    Recommendations powered by the <a href="https://www.qloo.com/" rel="noopener" target="_blank">Qloo</a> Taste AI Insights API.
+    Recommendations powered by the <a href="https://www.qloo.com/" rel="noopener" target="_blank">Qloo</a> Taste AI Insights API. No LLM: every pick comes from Qloo and Kindred's own vetting.
     Built for the <a href="https://qloo.devpost.com/" rel="noopener" target="_blank">Qloo Agentic Hackathon</a>.
     <a href="https://github.com/Zhuoli/kindred" rel="noopener" target="_blank">Source on GitHub</a>.
   </footer>

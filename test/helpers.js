@@ -28,20 +28,24 @@ export function brand(id, name, { pop = 0.8, genres = ['Fashion'], subtype = 'Fa
 }
 
 /** Fake Qloo client with scripted responses; records every call. */
-export function fakeQloo({ search = {}, insights = () => ({ entities: [] }), tags = {} } = {}) {
+export function fakeQloo({ search = {}, insights = () => ({ entities: [] }), tags = {}, compare = () => ({ shared: [], a: [], b: [] }) } = {}) {
   const calls = [];
   return {
     calls,
     async search(q, opts) { calls.push({ kind: 'search', q, opts }); return search[q] ?? []; },
     async tags(q, opts) { calls.push({ kind: 'tags', q, opts }); const t = tags[q]; return typeof t === 'function' ? t(opts) : (t ?? []); },
     async insights(params) { calls.push({ kind: 'insights', params }); return insights(params, calls); },
+    async compare(a, b, opts) { calls.push({ kind: 'compare', a, b, opts }); return compare(a, b, opts); },
   };
 }
 
 export function mockRes() {
   const res = { statusCode: 200, headers: {}, body: '' };
   res.setHeader = (k, v) => { res.headers[k.toLowerCase()] = v; };
-  res.end = (b) => { res.body = b ?? ''; };
+  res.write = (chunk) => { res.body += chunk; return true; };
+  res.flushHeaders = () => {};
+  res.end = (b) => { res.body += b ?? ''; res.ended = true; };
+  res.lines = () => res.body.split('\n').filter(Boolean).map((l) => JSON.parse(l));
   res.json = () => JSON.parse(res.body);
   return res;
 }

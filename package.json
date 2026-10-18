@@ -1,6 +1,6 @@
 {
   "name": "kindred",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Kindred: a taste-aware agent that plans the gift and the outing for one specific friend, grounded in Qloo's taste graph.",
   "type": "module",

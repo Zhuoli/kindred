@@ -1,6 +1,10 @@
 # Kindred
 
-**Gifts and outings that fit one specific friend.** Tell Kindred a few things your friend loves (an artist, a film, a show, a book, a brand, a favourite bakery), plus any interests in your own words ("natural wine", "vinyl", "hiking"). It plans a gift and an outing for them, and every pick comes with the reason it fits: *"because they love Phoebe Bridgers and Lady Bird, and they're into natural wine."* Already have a gift in mind? **Would they like it?** scores it against their taste.
+**Plans that fit one specific person, or both of you.** Tell Kindred a few things your friend loves (an artist, a film, a show, a book, a brand, a favourite bakery), plus any interests in your own words ("natural wine", "vinyl", "hiking"). It plans a gift and an outing for them, and every pick comes with the reason it fits: *"because they love Phoebe Bridgers and Lady Bird, and they're into natural wine."* Already have a gift in mind? **Would they like it?** scores it against their taste.
+
+**"For both of us" mode** blends your taste with your friend's. Kindred compares the two taste profiles to find your common ground, plans an outing plus a film, a show and music for the two of you, and labels every pick with whose taste it serves: *"For both of you: because Maya loves Lady Bird, and Sam loves The Bear."* Picks that serve both of you rank first, and neither person is allowed to take over the plan.
+
+**Watch it think.** While a plan is being built, the agent's steps stream into the page live: every Qloo call as it starts and finishes, with its result count, latency, what survived vetting, what was thrown out and why, and when the agent relaxed its own filters.
 
 Live demo: https://kindred-qloo.vercel.app (no login; try one of the pre-built example friends)
 
@@ -25,7 +29,17 @@ A generic LLM guesses at gifts from stereotypes. Kindred works from what this pa
 7. **Would they like it?** The candidate is resolved, then scored with `filter.results.entities=<id>`, which returns its affinity to the friend's taste. The affinity is mapped to a plain verdict, with the loves that drove it and stronger alternatives from the same category.
 8. **Explain.** Qloo's explainability scores are mapped back to the friend's loves, and matching interest tags are shown too.
 
-The UI shows the full agent trace: each Qloo call with its parameters, result count and latency, plus which results were vetted out and why.
+### "For both of us" mode
+
+1. **Resolve both people** in parallel through `GET /search` and `GET /v2/tags` (identical lookups are served from the per-request cache).
+2. **Common ground.** `GET /v2/insights/compare` with `a.signal.interests.entities` (their loves) and `b.signal.interests.entities` (yours) returns the taste tags you share, with an overlap score, plus the tags only one of you has. Uninformative tags (a shared country, say) are dropped.
+3. **Blended calls.** One Insights call per domain (films, TV shows, artists, and each outing leg) is signalled by *both* people's loves, with `feature.explainability=true`.
+4. **Attribution.** For every pick, Qloo's per-input explainability scores are split by owner and averaged over the number of loves each person gave (so listing more things doesn't win by volume). That gives a share for each person and a label: *for both of you*, *leans Maya* or *leans you*.
+5. **Fair re-rank.** Picks are ranked by affinity, nudged toward balanced ones; selection then never lets one person's picks outnumber the other's by more than one while alternatives remain. Venues still go through the same type, hours and chain checks as gift mode.
+
+### Live agent view
+
+`POST /api/plan` with `Accept: application/x-ndjson` streams one JSON object per line: `phase` (a new stage of the loop), `start` (a Qloo call is in flight), `step` (the call finished, after vetting, with counts, latency, dropped results and the exact parameters), then a final `result`. Cached and example plans replay their recorded trace in the same view, marked as replayed with zero new calls. Plain JSON clients get the same result without the stream.
 
 ## Protecting the quota
 
@@ -42,6 +56,8 @@ On top of that: per-IP rate limiting, a 4-requests-per-second throttle (the key 
 | Route | What it does |
 |---|---|
 | `POST /api/plan` | `{ friend, occasion, loves[], interests[], city, vibe: dinner\|daytime\|night, budget: 1-4, surprise }` → gifts, outing, trace |
+| `POST /api/plan` (us mode) | add `{ mode: "us", you, yourLoves[], yourInterests[] }` → common ground, films/shows/artists and outing for both, per-pick lean, balance, trace |
+| any `POST /api/plan` | send `Accept: application/x-ndjson` for live `phase` / `start` / `step` events, then the `result` |
 | `POST /api/check` | `{ loves[], interests[], city, candidate }` → affinity, verdict, reasons, alternatives |
 | `GET /api/examples` | Example friends (inputs only) |
 | `GET /api/health` | Configuration and quota snapshot (no secrets) |
@@ -51,13 +67,14 @@ On top of that: per-IP rate limiting, a 4-requests-per-second throttle (the key 
 ```
 public/              static UI (vanilla JS; never sees the API key)
 api/*.js             Vercel functions -> lib/handler.js (validation, rate limit, cache, quota guard, error hygiene)
-lib/agent.js         planner: resolve -> interests -> fingerprint -> parallel vetted tools -> relax -> explain; runCheck
+lib/agent.js         planner: resolve -> interests -> fingerprint -> parallel vetted tools -> relax -> explain; runCheck; live events
+lib/together.js      "for both of us": compare -> blended calls -> per-person attribution -> fair re-rank
 lib/venues.js        outing legs, venue-type validation, evening hours, chain detection
 lib/gifts.js         giftable-brand rules, mainstream cap, diversity re-ranking
 lib/interests.js     free-text interests -> Qloo tags
 lib/plan-cache.js    plan-level cache + quota guard
 lib/cache.js         memory / file / private Blob stores
-lib/qloo.js          server-only Qloo client: X-Api-Key header, GET, throttle, 429 retry, per-request cache, quota reading
+lib/qloo.js          server-only Qloo client (search, tags, insights, compare): X-Api-Key header, GET, throttle, 429 retry, per-request cache, quota reading
 lib/examples.js      example friends (inputs only)
 test/                node:test unit tests with synthetic fixtures
 ```
@@ -72,6 +89,7 @@ cp .env.example .env    # add your Qloo hackathon key; never commit it
 set -a; . ./.env; set +a
 npm test                # unit tests (no network)
 npm run smoke           # one live end-to-end plan against the Qloo API
+npm run smoke -- '{"mode":"us","friend":"Maya","loves":["Lady Bird"],"yourLoves":["The Bear"],"city":"Seattle"}'
 npm run dev             # http://localhost:3000
 ```
 

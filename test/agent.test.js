@@ -215,3 +215,26 @@ test('runCheck handles unknown candidates and things they already love', async (
   const same = await runCheck(validateCheck({ loves: ['Lady Bird'], candidate: 'Lady Bird' }).value, { qloo });
   assert.equal(same.verdict.label, 'They already love it');
 });
+
+test('runAgent streams phases and one finished step per trace entry, annotated after vetting', async () => {
+  const qloo = fakeQloo({ search: SEARCH, insights: scripted, tags: TAGS });
+  const events = [];
+  const { value } = validateRequest({ friend: 'Maya', loves: ['Phoebe Bridgers', 'Lady Bird'], interests: ['natural wine'], city: 'San Francisco', budget: 2 });
+  const plan = await runAgent(value, { qloo, onEvent: (e) => events.push(e) });
+  assert.deepEqual(events.filter((e) => e.type === 'phase').map((e) => e.phase), ['resolve', 'fingerprint', 'plan', 'compose']);
+  const starts = events.filter((e) => e.type === 'start');
+  const steps = events.filter((e) => e.type === 'step');
+  assert.equal(steps.length, plan.trace.length);
+  assert.deepEqual(new Set(starts.map((e) => e.id)), new Set(steps.map((e) => e.id)), 'every started call finishes');
+  for (const st of steps) {
+    const entry = plan.trace.find((t) => t.step === st.step && t.ms === st.ms);
+    assert.ok(entry, `${st.step} is in the trace`);
+    if (st.endpoint === '/v2/insights' && st.step !== 'taste fingerprint') assert.equal(st.kept, entry.kept, `${st.step} carries its vetting result`);
+  }
+  const relaxed = steps.find((e) => e.step === 'outing: dinner (relaxed)');
+  assert.ok(relaxed.dropped.length && relaxed.note);
+  const before = plan.trace.length;
+  const quiet = await runAgent(value, { qloo, onEvent: () => { throw new Error('listener bug'); } });
+  assert.equal(quiet.ok, true, 'a broken listener never breaks a plan');
+  assert.equal(quiet.trace.length, before);
+});
