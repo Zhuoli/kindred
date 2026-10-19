@@ -238,3 +238,11 @@ test('runAgent streams phases and one finished step per trace entry, annotated a
   assert.equal(quiet.ok, true, 'a broken listener never breaks a plan');
   assert.equal(quiet.trace.length, before);
 });
+
+import { parseLove as _parseLove } from '../lib/agent.js';
+test('parseLove reads an optional type hint', () => {
+  assert.deepEqual(_parseLove('Severance (TV show)'), { query: 'Severance', types: ['urn:entity:tv_show'] });
+  assert.deepEqual(_parseLove('Dune (film)').types, ['urn:entity:movie']);
+  assert.equal(_parseLove('Lady Bird').types.length > 3, true);
+  assert.equal(_parseLove('Blink (2005)').query, 'Blink (2005)');
+});
